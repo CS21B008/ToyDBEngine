@@ -1,0 +1,3 @@
+insert_into mytab 12,kalidas
+insert_into mytab 13,abcd
+select_all from mytab

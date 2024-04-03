@@ -1,0 +1,225 @@
+
+	
+	public Vector<String> parse(Vector<Token> tokens){
+		this.tokens = tokens;
+		Vector<String> intermediateCode = new Vector<String>();
+	
+		/* CFG:
+		 * Start -> CREATE Start |
+		 * 			INSERT Start |
+		 * 			SELECT Start ;
+		 * CREATE -> "create" String Num ATTR;
+		 * ATTR -> DataType String ATTR | stop condition;
+		 * INSERT -> "insert" "into" String "(" comma separated values ")" ;
+		 * SELECT -> "select" "*" "from" String ["where" COND]| 
+		 * 			 "select" COLOUMS "from" String ["where" COND];
+		 * COND -> String OP String COND | ;
+		 * COLOUMS -> String "." String CONT | String CONT;
+		 * CONT -> "," COLOUMS | ;
+		 */
+		int i=0;
+		while(i<tokens.size()) {
+			if(tokens.elementAt(i).type == TokenType.CREATE) {
+				i = i+1;
+				// System.out.print(i+" ");
+				if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+					if(tokens.elementAt(i+1).type == TokenType.INTNUM) {
+						int numAttr = Integer.parseInt(tokens.elementAt(i+1).value);
+						String code = "create_table " + tokens.elementAt(i).value;
+						intermediateCode.add(code);
+						for( int j=0;j<numAttr;j++) {
+							if(tokens.elementAt(i+1+2*j+1).type == TokenType.DATATYPE) {
+								if(tokens.elementAt(i+1+2*j+2).type == TokenType.VARIABLE ) {
+									String code1 = "add_attribute "+tokens.elementAt(i+1+2*j+1).value+" "+tokens.elementAt(i+1+2*j+2).value;
+									
+									intermediateCode.add(code1);
+								} else { System.out.println("Invalid syntax1"); break; }
+							} else { System.out.println("Invalid syntax2"); break; }
+						}
+						i = i+1+2*numAttr+1;
+						// System.out.print(i+" ");
+					} else { System.out.println("Invalid syntax3"); break; }
+				}
+				else { System.out.println("Invalid syntax4"); break; }
+			} else if (tokens.elementAt(i).type == TokenType.INSERT) {
+				i = i+1;
+				// System.out.print(i+" ");
+				if(tokens.elementAt(i).type == TokenType.INTO) {
+					i = i+1;
+					// System.out.print(i+" ");
+					if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+						String tableName = tokens.elementAt(i).value;
+						i = i+1;
+						// System.out.print(i+" ");
+						if(tokens.elementAt(i).type == TokenType.LEFT_PAREN) {
+							i = i+1;
+							String values = "";
+							// System.out.print(i+" ");
+							while(tokens.elementAt(i).type != TokenType.RIGHT_PAREN) {
+								if(tokens.elementAt(i).type == TokenType.STRING || tokens.elementAt(i).type == TokenType.INTNUM || tokens.elementAt(i).type == TokenType.FLOATNUM ){
+									values = values + tokens.elementAt(i).value + ",";
+									i = i+1;
+									// System.out.print(i+" ");
+									if(tokens.elementAt(i).type == TokenType.COMMA) {
+										i = i+1;
+										// System.out.print(i+" ");
+									} else if(tokens.elementAt(i).type == TokenType.RIGHT_PAREN) {
+										values = values.substring(0, values.length()-1);
+										String code = "insert_into "+tableName+" "+values;
+										intermediateCode.add(code);
+										i = i+1;
+										// System.out.print(i+" ");
+										break;
+									} else { System.out.println("Invalid syntax5"); break; }
+								} else { System.out.println("Invalid syntax6"); break; }
+							}
+						} else { System.out.println("Invalid syntax7"); break; }
+					} else { System.out.println("Invalid syntax8"); break; }
+				} else { System.out.println("Invalid syntax9"); break; }
+			} else if (tokens.elementAt(i).type == TokenType.SELECT) {
+				i = i+1;
+				// System.out.print(i+" ");
+				if(tokens.elementAt(i).type == TokenType.STAR) {
+					i = i+1;
+					// System.out.print(i+" ");
+					if(tokens.elementAt(i).type == TokenType.FROM) {
+						i = i+1;
+						// System.out.print(i+" ");
+						if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+							String tableName = tokens.elementAt(i).value;
+							i = i+1;
+							// System.out.print(i+" ");
+							String code = "select_all "+tableName;
+							while(i<tokens.size() && tokens.elementAt(i).type == TokenType.COMMA){
+								i = i+1;
+								// System.out.print(i+" ");
+								if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+									tableName = tokens.elementAt(i).value;
+									i = i+1;
+									// System.out.print(i+" ");
+									code = code + " " + tableName;
+								} else { System.out.println("Invalid syntax10"); break; }
+							}
+							if(i<tokens.size() && tokens.elementAt(i).type == TokenType.WHERE){
+								i = i+1;
+								// System.out.print(i+" ");
+								Vector<String> conditions = new Vector<String>();
+								String left = "";
+								String right = "";
+								String op = "";
+								if(tokens.elementAt(i).type == TokenType.VARIABLE){
+									left = tokens.elementAt(i).value;
+									i = i+1;
+									// System.out.print(i+" ");
+									if(tokens.elementAt(i).type == TokenType.DOT){
+										i = i+1;
+										// System.out.print(i+" ");
+										if(tokens.elementAt(i).type == TokenType.VARIABLE){
+											left = left+"."+tokens.elementAt(i).value;
+											i = i+1;
+											// System.out.print(i+" ");
+										}else{ System.out.println("Invalid syntax11"); break;}
+									}
+									if(tokens.elementAt(i).type == TokenType.EQ || tokens.elementAt(i).type == TokenType.NE || tokens.elementAt(i).type == TokenType.GT || tokens.elementAt(i).type == TokenType.LT || tokens.elementAt(i).type == TokenType.GE || tokens.elementAt(i).type == TokenType.LE){
+										op = tokens.elementAt(i).value;
+										i = i+1;
+										// System.out.print(i+" ");
+										if(tokens.elementAt(i).type == TokenType.VARIABLE){
+											right = tokens.elementAt(i).value;
+											i = i+1;
+											// System.out.print(i+" ");
+											if(tokens.elementAt(i).type == TokenType.DOT){
+												i = i+1;
+												// System.out.print(i+" ");
+												if(tokens.elementAt(i).type == TokenType.VARIABLE){
+													right = right+"."+tokens.elementAt(i).value;
+													i = i+1;
+													// System.out.print(i+" ");
+												}else{ System.out.println("Invalid syntax11"); break;}
+											}else{ System.out.println("Invalid syntax11"); break;}
+										}else{ System.out.println("Invalid syntax11"); break;}
+									}else{ System.out.println("Invalid syntax11"); break;}
+								}else{ System.out.println("Invalid syntax11"); break;}
+								
+							}
+							intermediateCode.add(code);
+						} else { System.out.println("Invalid syntax10"); break; }
+					} else { System.out.println("Invalid syntax11"); break; }
+				} else { 
+					if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+						Vector<String> columns = new Vector<String>();
+						String name = tokens.elementAt(i).value;
+						i = i+1;
+						// System.out.print(i+" ");
+						if(tokens.elementAt(i).type == TokenType.DOT){
+							i = i+1;
+							// System.out.print(i+" ");
+							if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+								columns.add(name+"."+tokens.elementAt(i).value);
+								i = i+1;
+								// System.out.print(i+" ");
+							} else { System.out.println("Invalid syntax12"); break; }
+						}else {
+							columns.add(name);
+						}
+						while(tokens.elementAt(i).type == TokenType.COMMA) {
+							i = i+1;
+							// System.out.print(i+" ");
+							if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+								name = tokens.elementAt(i).value;
+								i = i+1;
+								// System.out.print(i+" ");
+								if(tokens.elementAt(i).type == TokenType.DOT){
+									i = i+1;
+									// System.out.print(i+" ");
+									if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+										columns.add(name+"."+tokens.elementAt(i).value);
+										i = i+1;
+										// System.out.print(i+" ");
+									} else { System.out.println("Invalid syntax12"); break; }
+								} else { 
+									columns.add(name);
+								}
+							} else { System.out.println("Invalid syntax12"); break; }
+						}
+						if(tokens.elementAt(i).type == TokenType.FROM) {
+							i = i+1;
+							// System.out.print(i+" ");
+							Vector<String> tables = new Vector<String>();
+							if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+								tables.add(tokens.elementAt(i).value);
+								i=i+1;
+								// System.out.print(i+" ");
+								while(i<tokens.size() && tokens.elementAt(i).type == TokenType.COMMA){
+									i = i+1;
+									// System.out.print(i+" ");
+									if(tokens.elementAt(i).type == TokenType.VARIABLE) {
+										tables.add(tokens.elementAt(i).value);
+										i = i+1;
+										// System.out.print(i+" ");
+									} else { System.out.println("Invalid syntax12"); break; }
+								}
+								String code = "select "+columns.elementAt(0);
+								for(int j=1;j<columns.size();j++) {
+									code = code + " " + columns.elementAt(j);
+								}
+								code = code + " from " + tables.elementAt(0);
+								for(int j=1;j<tables.size();j++) {
+									code = code + " " + tables.elementAt(j);
+								}
+							} else { System.out.println("Invalid syntax12"); break; }
+						} else { System.out.println("Invalid syntax12"); break; }
+					} else { System.out.println("Invalid syntax12"); break; }
+				}
+			} else {
+				System.out.println("Invalid syntax12: " + i);
+				break;
+			}
+		}
+
+		if(i<tokens.size()) {
+			return null;
+		}
+		
+		return intermediateCode;
+	}
